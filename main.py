@@ -24,7 +24,7 @@ from PIL import Image, ImageTk
 
 def open_out_folder():
     """打开输出图片的位置"""
-    out_path = os.path.dirname("./out")
+    out_path = resource_path("./out")
     if sys.platform.startswith("darwin"):
         subprocess.run(['open', out_path])
     elif sys.platform.startswith("win32"):
@@ -36,6 +36,14 @@ def open_out_folder():
     else:
         messagebox.showinfo("提示", "无法打开文件夹，请手动打开")
 
+# 获取资源文件路径
+def resource_path(relative_path):
+    """获取资源文件路径（支持打包后运行）"""
+    if hasattr(sys, "_MEIPASS"):
+        # PyInstaller 打包后的临时文件夹路径
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -44,12 +52,14 @@ class App(tk.Tk):
         # 配置ui信息
         self.title("Mouse Tracker")
         self.geometry("400x400")
-        icon_path = './assert/a952d-5afjj.icns'
+        # 动态获取图标路径
+        icon_path = resource_path('assert/a952d-5afjj.icns')
+        favicon_path = resource_path('assert/favicon.ico')
         if sys.platform.startswith("darwin"):
             icon_image = ImageTk.PhotoImage(Image.open(icon_path))
             self.iconphoto(True, icon_image)
         else:
-            self.wm_iconbitmap('./assert/favicon.ico')
+            self.wm_iconbitmap(favicon_path)
         self.config(
             background='#2e3e26',
         )
@@ -108,7 +118,7 @@ class App(tk.Tk):
 
     def stop_tracking(self):
         """点击结束记录"""
-        self.imageCache.save()
+        self.imageCache.save(resource_path("./out"))
         self.trackers.stop()
 
 
