@@ -45,7 +45,7 @@ class MoveTracker(tk.BooleanVar):
                         width=self.width_value.get()
                     )
 
-            # time.sleep(0.01)  # 限制渲染线程的CPU占用
+            time.sleep(0.01)  # 限制渲染线程的CPU占用
 
     def on_move(self, x: int, y: int):
         """鼠标移动监听事件函数"""
