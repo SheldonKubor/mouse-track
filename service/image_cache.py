@@ -7,6 +7,8 @@ from PIL import Image, ImageDraw
 from service.settings import Colors
 from service.types import Position, Color, Size
 from screeninfo import get_monitors
+from utils.get_screen_size import calculate_bounding_box
+import platform
 
 
 class ImageCache(object):
@@ -24,24 +26,17 @@ class ImageCache(object):
         将内部的绘制图片重置为一个纯黑色图片
         :return:
         """
-        # self._cache = Image.new(
-        #     "RGBA",
-        #     self._size,
-        #     (0, 0, 0, 255),
-        # )
+
         screen_images = []
-        total_width = 0
-        max_height = 0
+
         monitors = get_monitors()
-        # if len(monitors) != 2:
-        #     raise ValueError("当前代码仅针对两个屏幕的情况进行颜色区分，实际检测到的屏幕数量不是2个。")
+        (min_x, min_y, max_x, max_y) = calculate_bounding_box(monitors)
+        total_width = max_x - min_x
+        total_height = max_y - min_y
 
         for index, monitor in enumerate(monitors):
             screen_width = monitor.width
             screen_height = monitor.height
-
-            total_width += screen_width
-            max_height = max(max_height, screen_height)
 
             # 创建一个与屏幕分辨率相同的空白图像，模式为RGB，背景填充为黑色
             image = Image.new('RGBA', (screen_width, screen_height), (0, 0, 0))
@@ -58,12 +53,32 @@ class ImageCache(object):
 
             screen_images.append(image)
 
+            if monitor.is_primary:  # 记录主屏幕坐标
+                global center_x, center_y
+                if platform.system() == "Windows":
+                    center_x = monitor.x - min_x
+                    center_y = monitor.y - min_y
+                elif platform.system() == "Darwin":
+                    center_x = monitor.x - min_x
+                    center_y = total_height - (monitor.y - min_y) - monitor.height
+            print(
+                f"monitor{index} size ({monitor.width}, {monitor.height}), Location ({monitor.x}, {monitor.y}), is primary:({monitor.is_primary})")
+
         # 创建一个新的空白图像，用于组合所有屏幕图像，大小为总宽度和最大高度，背景也填充为黑色
-        combined_image = Image.new('RGBA', (total_width, max_height), (0, 0, 0))
+        combined_image = Image.new('RGBA', (total_width, total_height), (0, 0, 0))
         x_offset = 0
-        for screen_image in screen_images:
-            combined_image.paste(screen_image, (x_offset, 0))
-            x_offset += screen_image.width
+        y_offset = 0
+        for i in range(0, len(screen_images)):
+            screen_image = screen_images[i]
+            if platform.system() == "Windows":
+                x_offset = monitors[i].x - min_x
+                y_offset = monitors[i].y - min_y
+            elif platform.system() == "Darwin":  # Mac OS
+                # 假设屏幕高度为 screen_height
+                x_offset = monitors[i].x - min_x
+                y_offset = total_height - (monitors[i].y - min_y) - monitors[i].height
+            combined_image.paste(screen_image, (x_offset, y_offset))
+
         self._cache = combined_image
 
     def save(self, dir_path="out", create_dir=True, clean=True):
@@ -97,6 +112,11 @@ class ImageCache(object):
         - start: tuple of the line's start
         - end: tuple of the line's end
         """
+        offset = [center_x, center_y]
+        start = tuple(a + b for a, b in zip(start, offset))
+        end = tuple(a + b for a, b in zip(end, offset))
+
+        start = start
         self._draw_transp_line(xy=[start, end], fill=color, width=width)
 
     def ellipse(self, x, y, color: Color, radius=10):
@@ -108,6 +128,8 @@ class ImageCache(object):
         :param radius:
         :return: None
         """
+        x = x + center_x
+        y = y + center_y
         self._draw_transparent_ellipse(
             [(x - radius, y - radius), (x + radius, y + radius)],
             fill=color,
