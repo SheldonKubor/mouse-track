@@ -62,7 +62,7 @@ class ImageCache(object):
                     center_x = monitor.x - min_x
                     center_y = total_height - (monitor.y - min_y) - monitor.height
             print(
-                f"monitor{index} size ({monitor.width}, {monitor.height}), Location ({monitor.x}, {monitor.y}), is primary:({monitor.is_primary})")
+                f"monitor{index} size ({monitor.width}, {monitor.height}), Location ({monitor.x}, {monitor.y}), is primary:({monitor.is_primary}) center_x: {center_x}, center_y: {center_y}")
 
         # 创建一个新的空白图像，用于组合所有屏幕图像，大小为总宽度和最大高度，背景也填充为黑色
         combined_image = Image.new('RGBA', (total_width, total_height), (0, 0, 0))
